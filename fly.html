@@ -1,0 +1,844 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <script src="CesiumUnminified/Cesium.js"></script>
+
+    <style>
+        @import url(CesiumUnminified/Widgets/widgets.css);
+
+        html, body, #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+
+    <title>模拟飞行</title>
+</head>
+<body>
+    <div style="position: relative; top: 20px; left: 20px; width:100px;height:150px; z-index:10;">
+        <button id="btnFlyGame" type="button" style="position: relative; " onclick="funcFlyGame()">模拟飞行</button>
+    </div>
+    <div id="cesiumContainer" style="position: absolute; top: 0; left: 0; height: 100%; z-index: 0;">
+    </div>
+
+    <script type="text/javascript">
+
+
+
+        Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI1NTRlZmIzZC1mNGRlLTQ4MDYtOWRjOC1hNGQ4NjlmMmE4OGMiLCJpZCI6ODc1MjcsImlhdCI6MTY0OTM4OTU5OX0.CpHmD7yyQO122b7wKRANtzgeh18UxmVTmjsWsMB-Wdo";
+        const viewer = new Cesium.Viewer("cesiumContainer",
+            {
+                animation: false,   //动画
+                timeline: false,    //时间线控件
+                scene3DOnly: true,      //仅显示3D地图，不显示平面地图选择
+                baseLayerPicker: false,     //图层选择关闭
+                navigationHelpButton: false,     //帮助按钮
+                shouldAnimate: true,           // 当viewer开启后，启动动画
+                infoBox: false,                      //显示图层信息
+                shadows: false,               //显示阴影
+                geocoder: true,//是否显示geocoder小器件，右上角查询按钮
+                homeButton: true,//是否显示Home按钮
+                sceneModePicker: false,//是否显示3D/2D选择器
+                fullscreenButtion: true,//是否显示全屏按钮
+                vrButton: false,              // VR 按钮是否显示
+                selectionIndicator: true,//是否显示选取指示器组件
+                orderIndependentTranslucency: false,    //设置渲染
+                contextOptions: {
+                    webgl: { alpha: true, },
+                    requestWebg12: true,                     //开启该选项的前提条件是在支持WebGL 2.0的环境下，WebGL 2.0中通过多采样渲染缓冲对象（Multisampled RederBuffer），以在帧缓冲区的渲染缓冲对象上实现MSAA。
+                },
+                massSamples: 4                            //MSAA（multisampled antialiasing多重采样抗锯齿
+
+
+            }
+        );
+        viewer._cesiumWidget._creditContainer.style.display = "none";  //去除水印
+        viewer.scene.debugShowFramesPerSecond = true;                    //显示帧率
+
+
+         //开启cesium全球地形
+        /*
+        viewer.terrainProvider = Cesium.createWorldTerrain(
+            {
+                requestWaterMask: true,      //水面数据
+                requestVertexNormals:false     //光照数据
+            }
+        );
+        */
+
+        //删除默认影像图层
+        viewer.imageryLayers.remove(viewer.imageryLayers.get(0));
+
+        //增加 Esri ArcGis 影像底图
+        viewer.imageryLayers.addImageryProvider(new Cesium.ArcGisMapServerImageryProvider({
+            url: "https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/"
+        })
+        );
+        
+
+
+        var scene = viewer.scene
+        var canvas = viewer.canvas;
+
+        /*
+        canvas.setAttribute('tabindex', '0');
+        //如果点击就获取画布焦点
+        canvas.addEventListener('click', function () {
+            canvas.focus();
+        });
+        */
+
+        canvas.focus();
+
+
+
+
+        //显示 3D 模型
+        function createModel(url, x, y, height) {
+            //viewer.entities.removeAll();
+
+            var position = Cesium.Cartesian3.fromDegrees(x, y, height);
+            const heading = Cesium.Math.toRadians(180);
+            const pitch = 0;
+            const roll = 0;
+            const hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
+            const orientation = Cesium.Transforms.headingPitchRollQuaternion(position, hpr);
+
+            entity = viewer.entities.add({
+                name: url,
+                position: position,
+                orientation: orientation,
+                model: {
+                    uri: url,
+                    minimumPixelSize: 150,
+                    maximumScale: 15000,
+                },
+            });
+            //viewer.trackedEntity = entity;       //视图锁定条目对象
+        }
+
+
+
+
+
+        //createModel("./SampleData/models/CesiumAir/Cesium_Air.glb", 108.3833, 22.80260, 2500);
+
+        var entity = viewer.entities.add(
+            {
+                position: Cesium.Cartesian3.fromDegrees(108.3523, 22.8068),
+                billboard: {
+                    image: "SampleData/win11.png", // default: undefined
+                    show: true, // default
+                    pixelOffset: new Cesium.Cartesian2(0, 0), // default: (0, 0)
+                    eyeOffset: new Cesium.Cartesian3(0.0, 0.0, 0.0), // default
+                    horizontalOrigin: Cesium.HorizontalOrigin.CENTER, // default
+                    verticalOrigin: Cesium.VerticalOrigin.BOTTOM, // default: CENTER
+                    scale: 3, // default: 1.0
+                    color: Cesium.Color.WHITE, // default: WHITE
+                    rotation: Cesium.Math.PI_OVER_FOUR, // default: 0.0
+                    alignedAxis: Cesium.Cartesian3.ZERO, // default
+                    width: 300, // default: undefined
+                    height: 300, // default: undefined
+                    sizeInMeters: true
+                }
+            }
+        );
+
+
+        viewer.camera.setView({
+            destination: new Cesium.Cartesian3.fromDegrees(108.3581, 22.8059, 10000),
+            orientation: {
+                heading: Cesium.Math.toRadians(0),  //镜头朝向 ，九十度，即东向   Radians 角度 0度是正北,镜头顺时针旋转九十度，即东向
+                pitch: Cesium.Math.toRadians(-75),   //镜头倾斜45度俯视，围绕Y轴旋转
+                roll: 0.0                             //围绕X轴旋转
+            }
+        }
+        );
+
+
+        //模拟飞行
+
+
+        var camera = viewer.camera;
+        var controller = scene.screenSpaceCameraController;
+        var r = 0;
+        //中心点
+        var center = new Cesium.Cartesian3();
+
+        //机身模型的偏移参数
+        var headingPitchRoll = new Cesium.HeadingPitchRoll(0,0,0);
+
+        //机身模型的偏移参数
+        const heading = -Cesium.Math.PI_OVER_TWO;          // 负数 Pi / 2   Pi除以2
+        const pitch = Cesium.Math.PI_OVER_FOUR;            //    Pi/4   pi除以4
+        const roll = 0.0;
+        const hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
+
+        //相机模型的偏移参数
+        var hpRange = new Cesium.HeadingPitchRange();
+
+        //速度
+        var speed = 20;
+
+        //每次操作姿态变化 10度
+        let deltaRadians = Cesium.Math.toRadians(10);
+
+        //速度向量
+        var speedVector = new Cesium.Cartesian3();
+
+        //初始位置
+        var position = new Cesium.Cartesian3.fromDegrees(108.3581, 22.7970, 10000);
+        console.log(position);
+     
+        //局部变换坐标系
+        /*从具有东北向上轴的参考帧计算4x4变换矩阵以提供的原点为中心，以提供的椭球的固定参考系为中心。局部轴定义为:
+            x 轴指向当地的东部方向。
+            y 轴指向本地北方向。
+            z 轴指向穿过该位置的椭球面法线方向。
+        */
+        ///生成一个由两个参考系生成的矩阵
+        var fixedFrameTransform = Cesium.Transforms.localFrameToFixedFrameGenerator("north", "west");     //如 north,east 则 飞机肚皮向天
+
+
+
+        // 使用primitive方式加载模型
+        
+        var planeModel = viewer.scene.primitives.add(
+            Cesium.Model.fromGltf({
+                url: './SampleData/models/CesiumAir/Cesium_Air.glb',
+                scale: 50.0,
+                modelMatrix: Cesium.Transforms.headingPitchRollToFixedFrame(
+                    position,
+                    headingPitchRoll,
+                    Cesium.Ellipsoid.WGS84,
+                    fixedFrameTransform
+                ),
+                minimumPixelSize: 256,
+                maximumScale: 1500,
+                id: 'plane',
+                allowPicking:true,
+            }))
+        
+
+        /*
+        const transform = Cesium.Transforms.headingPitchRollToFixedFrame(
+            position,
+            headingPitchRoll,
+            Cesium.Ellipsoid.WGS84,
+            fixedFrameTransform
+        );
+        */
+
+        /*
+        var planeMod = Cesium.Model.fromGltf({
+            url: './SampleData/models/CesiumAir/Cesium_Air.glb',
+            scale: 50.0,
+            modelMatrrix: transform ,
+            minimumPixelSize: 256,
+            //maximumScale: 15000,
+            show: true,
+            //allowPicking: true,
+        });
+
+        if (planeMod) {
+            console.log("模型创建成功 ");
+        } else {
+            console.log("创建失败！！");
+        }
+        */
+
+
+        //测试代码=================================================================================
+        //配置 box 参数对象
+        var boxConfig = new Cesium.BoxGeometry.fromDimensions({
+            vertexFormat: Cesium.VertexFormat.DEFAULT,
+            dimensions: new Cesium.Cartesian3(10000, 1000,4000)
+        }
+        );
+
+        //createGeometry(boxConfig)  boxConfig 是一个描述文件，创建一个BOX对象
+        //GeometryInstance.geometry 不需要实例的 BoxGeometry.createGeometry， 而是使用配置对象的实例 BoxGeometry.fromDimensions
+        var boxGeo = Cesium.BoxGeometry.createGeometry(boxConfig);
+
+        if (boxGeo) {
+            console.log("模型box创建成功 ");
+        } else {
+            console.log("创建box失败！！");
+        }
+
+
+
+
+        /*
+        var boxModelMatrix = Cesium.Matrix4.multiplyByUniformScale(Cesium.Matrix4.multiplyByTranslation(Cesium.Transforms.eastNorthUpToFixedFrame(
+            Cesium.Cartesian3.fromDegrees(108.3881, 22.7059, 5000)), new Cesium.Cartesian3(0.0, 0.0, 5000), new Cesium.Matrix4()), 5500, new Cesium.Matrix4());
+        */
+
+        //var cartographic = new Cesium.Cartographic(longitude, latitude, height);    //把84坐标系的角度，转为 cartographic 84坐标系的弧度对象
+        
+        var boxModelMatrix = Cesium.Transforms.northWestUpToFixedFrame(
+            Cesium.Cartesian3.fromDegrees(108.3523, 22.8068,10000));
+            
+        position = new Cesium.Cartesian3.fromDegrees(108.3581, 22.7970, 15000);
+
+        //创建对象实例 instance，未显示
+        var InstanceBottom = new Cesium.GeometryInstance({
+            geometry: boxConfig,
+            modelMatrix: Cesium.Transforms.headingPitchRollToFixedFrame(
+                position,
+                headingPitchRoll,
+                Cesium.Ellipsoid.WGS84,
+                fixedFrameTransform
+            ),
+            // attributes: { color: Cesium.ColorGeometryInstanceAttribute.fromColor(new Cesium.Color(1, 1, 0, 1)) },  // R,G,B,Black  //   show: new Cesium.ShowGeometryInstanceAttribute(true)
+            attributes: { color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.YELLOW  )},
+            id:"bottom"
+        });
+
+        /*
+        var InstanceTop = new Cesium.GeometryInstance({
+            geometry: boxConfig,
+            modelMatrix: Cesium.Matrix4.multiplyByTranslation(Cesium.Transforms.eastNorthUpToFixedFrame(
+                Cesium.Cartesian3.fromDegrees(108.3881, 22.7059)), new Cesium.Cartesian3(0.0, 0.0, 8000.0), new Cesium.Matrix4()),
+            attributes: { color: Cesium.ColorGeometryInstanceAttribute.fromColor(new Cesium.Color(0,1,0,0.5)) },
+            id: "top"
+        });
+        */
+        
+        
+        //创建 Primitive 实例，对象容器
+        var Primitive = new Cesium.Primitive(
+            {
+                geometryInstances: InstanceBottom,
+                appearance: new Cesium.PerInstanceColorAppearance(
+                    {
+                        translucent: false,
+                        closed:true
+                    }
+                )
+            }
+        );
+
+        //在 scene 场景的 primitives 中加入对象容器，就是通过显卡显示出来。显示一个 Primitive 的容器内容，并赋予一个变量 airplaneModel ，可以用于访问该新建的对象
+        var airplaneModel = scene.primitives.add(Primitive);
+        
+
+        //使用 primitive方式加载模型  ,为效率使用底层基本图元操作 primitive ，不使用 Entities 高层封装的api
+        //let airplaneModel = scene.primitives.add(planeMod);
+        /*
+        let airplaneModel = scene.primitives.add(new Cesium.Primitive(
+        {
+            geometryInstances: instance,
+            appearance: new Cesium.EllipsoidSurfaceAppearance({
+                material: Cesium.Material.fromType('Stripe')
+            })
+         }));
+         */
+
+
+
+
+        //机身模型的偏移参数
+        // headingPitchRoll = new Cesium.HeadingPitchRoll(0, 0, 0);
+
+        //速度
+        //let speed = 20;
+
+        //每次操作姿态变化 10度
+        //let deltaRadians = Cesium.Math.toRadians(5);
+
+        //速度向量
+        //let speedVector = new Cesium.Cartesian3();
+        
+
+        console.log(position);
+
+        var keyCatch = false;
+        
+        //添加键盘监听事件
+        document.addEventListener("keydown", function (e) {
+            switch (e.keyCode) {
+                //抬头 w
+                case 87:
+                    headingPitchRoll.pitch += deltaRadians;
+                    // 判断是否超过2π范围
+                    if (headingPitchRoll.pitch > Cesium.Math.TWO_PI) {
+                        headingPitchRoll.pitch -= Cesium.Math.TWO_PI;
+                    }
+                    console.log("抬头：pitch+");
+                    break;
+                // 低头 s
+                case 83:
+                    headingPitchRoll.pitch -= deltaRadians;
+                    if (headingPitchRoll.pitch < -Cesium.Math.TWO_PI) {
+                        headingPitchRoll.pitch += Cesium.Math.TWO_PI;
+                    }
+                    console.log("低头：pitch-");
+
+                    break;
+
+                // 左转 e
+                case 69:
+                    headingPitchRoll.heading -= deltaRadians;
+                    // 判断是否超过2π范围
+                    if (headingPitchRoll.heading < -Cesium.Math.TWO_PI) {
+                        headingPitchRoll.heading += Cesium.Math.TWO_PI;
+                    }
+                    console.log("左转：heading+");
+                    break;
+
+                // 右转 q
+                case 81:
+                    headingPitchRoll.heading += deltaRadians;
+                    // 判断是否超过2π范围
+                    if (headingPitchRoll.heading > Cesium.Math.TWO_PI) {
+                        headingPitchRoll.heading -= Cesium.Math.TWO_PI;
+                    }
+                    console.log("右转：heading-");
+                    break;
+
+                // 顺时针 a
+                case 65:
+                    headingPitchRoll.roll += deltaRadians;
+                    // 判断是否超过2π范围
+                    if (headingPitchRoll.roll > Cesium.Math.TWO_PI) {
+                        headingPitchRoll.roll -= Cesium.Math.TWO_PI;
+                    }
+                    console.log("顺时针翻滚：roll+");
+                    break;
+
+                // 逆时针 d
+                case 68:
+                    headingPitchRoll.roll -= deltaRadians;
+                    // 判断是否超过2π范围
+                    if (headingPitchRoll.roll < -Cesium.Math.TWO_PI) {
+                        headingPitchRoll.roll += Cesium.Math.TWO_PI;
+                    }
+                    console.log("逆时针翻滚：roll-");
+                    break;
+
+                // 加速 shift
+                case 16:
+                    speed += 10
+                    speed = Math.min(speed, 10000);
+                    console.log("加速:" + speed);
+                    break;
+                // 减速   space
+                case 32:
+                    speed -= 10;
+                    speed = Math.max(speed, 100);
+                    console.log("减速:" + speed);
+                    if (speed <= 100)
+                        speed = 0;
+                    break;
+                // 启动或关闭捕获按键事件 j 键
+                case 74:
+                    keyCatch = !keyCatch;
+                    //刷新飞机模型,更新数据同时刷新飞机位置(这里也是个1ms一次的回调)
+                    // 渲染更新前阶段添加监听
+                    if (keyCatch) {
+
+                        viewer.scene.preRender.addEventListener(moveCallbackFunc);             // scene.preRender 场景渲染的回调事件
+                    } else {
+                        viewer.scene.preRender.removeEventListener(moveCallbackFunc);
+
+
+                    }
+
+                    break;
+
+                default:
+                    break;
+            }
+        });
+
+        
+        //信息提示框
+        function annotate(cartesian, log, lat, height) {
+            createPoint(cartesian);
+
+            annotations.add({
+                show: true,
+                position: cartesian,
+                text:
+                    ' 经度: ' + log + ' \u00B0 ' +         //  \u unicode 00B0  度数符号
+                    '\n 纬度: ' + lat + ' \u00B0 ' +
+                    '\n 高度: ' + height + '米',
+                showBackground: true,
+                font: '15px sans-serif',
+                fillColor: Cesium.Color.WHITE,
+                horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+                verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY
+
+            });
+        }
+
+        //添加点
+        function createPoint(worldPosition) {
+            var point = viewer.entities.add({
+                position: worldPosition,
+                point: {
+                    color: Cesium.Color.RED,
+                    pixelSize: 6
+                }
+            });
+            return point;
+        }
+
+
+
+
+        // 飞行路径
+        //var pathPosition = new Cesium.SampledPositionProperty();
+
+        //添加飞机飞行路径
+        /*
+        var entityPath = viewer.entities.add({
+            position: pathPosition,
+            name: "飞行路径",
+            path: {
+                show: true,
+                leadTime: 0,
+                trailTime: 60,
+                width: 20,
+                resolution: 1,
+                material: new Cesium.PolylineGlowMaterialProperty({
+                    glowPower: 0.3,
+                    //taperPower: 0.3,
+                    color: Cesium.Color.RED,
+                })
+            }
+        });
+       */
+
+
+
+         function moveCallbackFunc (scene, time) {
+            //选择的笛卡尔分量Cartesian3.UNIT_X（x轴单位长度）乘以一个标量speed/10，得到速度向量speedVector
+            //console.log(speedVector);
+            speedVector = Cesium.Cartesian3.multiplyByScalar(
+                Cesium.Cartesian3.UNIT_X,
+                speed/10,
+                speedVector
+            );
+            //console.log(speedVector);
+
+            //飞机的模型矩阵与速度向量speedVector相乘，得到position
+            //console.log(position);
+
+            position = Cesium.Matrix4.multiplyByPoint(
+                airplaneModel.modelMatrix,
+                speedVector,
+                position
+            );
+
+            //console.log(position);
+
+            // 将点添加到路径中
+            //添加一个路径模型(就是白色的尾气)
+            //pathPosition.addSample(Cesium.JulianDate.now(), position);
+
+            // 更新模型姿态与位置
+            //飞机位置+旋转角度+地球+坐标矩阵=飞机模型矩阵
+            Cesium.Transforms.headingPitchRollToFixedFrame(
+                position,
+                headingPitchRoll,
+                Cesium.Ellipsoid.WGS84,
+                fixedFrameTransform,
+                airplaneModel.modelMatrix
+            );
+
+                // 镜头跟随
+        /*
+        Cesium.Matrix4.multiplyByPoint(airplaneModel.modelMatrix, airplaneModel.boundingSphere.center, center);
+        hpRange.heading = hpRoll.heading;
+        hpRange.pitch = hpRoll.pitch;
+        camera.lookAt(center, hpRange);
+        */
+
+        }
+
+
+        
+
+
+
+        function funcFlyGame() {
+
+            viewer.camera.setView({
+                destination: new Cesium.Cartesian3.fromDegrees(108.3581, 22.7599, 15000),
+                orientation: {
+                    heading: Cesium.Math.toRadians(0),  //镜头朝向 ，九十度，即东向   Radians 角度 0度是正北,镜头顺时针旋转九十度，即东向
+                    pitch: Cesium.Math.toRadians(-75),   //镜头倾斜45度俯视，围绕Y轴旋转
+                    roll: 0.0                             //围绕X轴旋转
+                }
+            }
+            );
+        }
+
+
+        /*
+
+        //事件实现
+        //替换双击左键事件处理
+        var ellipsoid = viewer.scene.globe.ellipsoid;
+        var handler = new Cesium.ScreenSpaceEventHandler(canvas);
+
+        handler.setInputAction(function (event) {
+
+            //捕获椭球体，将笛卡尔二维平面坐标转换为椭球体的笛卡尔三维坐标，返回球体表面的点
+            //获取 笛卡尔二维平面坐标,笛卡尔（直角）坐标 – 当用来表示位置的时候，这个坐标指在地固坐标系（Earth fixed-frame (ECEF)）下，相对地球中心的坐标位置，单位是米
+            var cartesian = viewer.camera.pickEllipsoid(event.position, viewer.scene.globe.ellipsoid);
+            if (cartesian) {
+                //将笛卡尔二维平面坐标,笛卡尔（直角）坐标转为椭球体的笛卡尔三维坐标（弧度），地图坐标
+                var cartographic = viewer.scene.globe.ellipsoid.cartesianToCartographic(cartesian);
+
+                //将椭球体的笛卡尔三维坐标（弧度）转为 转为经纬度（弧度）和高度(WGS84地球高程)描述的三维坐标十进制数
+                var log_String = Cesium.Math.toDegrees(cartographic.longitude).toFixed(4);
+                var lat_String = Cesium.Math.toDegrees(cartographic.latitude).toFixed(4);
+                var alti_String = (viewer.camera.positionCartographic.height).toFixed(2);
+
+                console.log(log_String, '经度');
+                console.log(lat_String, '纬度');
+                console.log(alti_String, '视角高度');
+
+                // createPoint(cartesian);      //在点击位置添加一个点
+                annotate(cartesian, log_String, lat_String, alti_String);          //在点击中位置创建一个注释文本
+
+            }
+        }
+            , Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+
+         */
+
+        // HTML overlay for showing feature name on mouseover 创建html元素，鼠标移动以及点击模型高亮作用
+        var nameOverlay = document.createElement("div");
+        viewer.container.appendChild(nameOverlay);
+        nameOverlay.className = "backdrop";
+        nameOverlay.style.display = "none";
+        nameOverlay.style.position = "absolute";
+        nameOverlay.style.bottom = "0";
+        nameOverlay.style.left = "0";
+        nameOverlay.style["pointer-events"] = "none";
+        nameOverlay.style.padding = "4px";
+        nameOverlay.style.backgroundColor = "red";
+
+
+        var bSelectObjCtrl = false;
+        
+
+        //飞机模型起始坐标
+        var planePos = Cesium.Cartesian3.fromDegrees(108.5581, 22.9059, 2000);
+        var DestPos;                //飞机模型的飞行目标坐标
+        var vHeadRoll = 0;
+
+        //用鼠标选择对象
+        viewer.screenSpaceEventHandler.setInputAction(function (e) {
+            var pickedObject = viewer.scene.pick(e.position);                  //e.position 坐标是屏幕分辨率的坐标
+            if (Cesium.defined(pickedObject)) {                          // pick(e.position) 如果返回为 undefined ，说明坐标没有点在 球体上,也没有点在三维模型上
+                bSelectObjCtrl = true;                          //飞机模型被选中
+
+                //屏幕转世界坐标，转为笛卡尔二维平面坐标
+                planePos = viewer.camera.pickEllipsoid(e.position, viewer.scene.globe.ellipsoid);        //画点、线、面时采用笛卡尔二维平面坐标； 画3D 立体对象时，采用笛卡尔三位坐标，或三维弧度坐标
+                
+
+                var objID = Cesium.defaultValue(pickedObject.id, pickedObject.primitive.id);
+                //if (entity instanceof Cesium.Entity) {
+                if (objID = 'plane') {
+                    if (pickedObject.primitive) {
+                        console.log(pickedObject.primitive.id);
+                        //console.log(pickedObject.primitive.getmetryInstances.geometry._positions);
+
+                        let scale = pickedObject.primitive.scale;   //获得模型的比例
+                        pickedObject.primitive.scale = 25;           //设置模型的比例
+
+                        //获取模型当前位置
+                        let vMatrix4 = pickedObject.primitive.modelMatrix;
+
+                        //let position1 = pickedObject.primitive.getmetryInstances.geometry._positions;
+
+                        //设置模型的位置  108.3581, 22.8059, 10000
+                        let position2 = Cesium.Cartesian3.fromDegrees(108.5581, 22.9059, 2000);
+
+
+                        //设置模型的方向
+                        /*
+                        let heading2 = Cesium.Math.toRadians(90);
+                        let pitch2 = Cesium.Math.toRadians(0);
+                        let roll2 = Cesium.Math.toRadians(0);
+                        */
+                        vHeadRoll = (vHeadRoll > 360) ? 0 : vHeadRoll + 90;
+
+
+                        vMatrix4 = Cesium.Transforms.headingPitchRollToFixedFrame(
+                            position2,
+                            new Cesium.HeadingPitchRoll(vHeadRoll, 0, 0),
+                            Cesium.Ellipsoid.WGS84,
+                            new Cesium.Transforms.localFrameToFixedFrameGenerator("north", "west"));
+
+
+                        //let orientation2 = Cesium.Transforms.headingPitchRollQuaternion(position2, new Cesium.headingPitchRoll(heading2, pitch2, roll2));
+                        //pickedObject.orientation = orientation2;
+
+                        pickedObject.primitive.modelMatrix = vMatrix4;
+                        //pickedObject.primitive.silhoouetteSize = 3.0;
+                        //pickedObject.primitive.update();
+                    }
+                }
+
+
+            } else {
+                bSelectObjCtrl = false;
+            }
+        }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+
+
+        //信息提示框
+        function annotate(cartesian, log, lat, height) {
+            createPoint(cartesian);
+
+            annotations.add({
+                show: true,
+                position: cartesian,
+                text:
+                    ' 经度: ' + log + ' \u00B0 ' +         //  \u unicode 00B0  度数符号
+                    '\n 纬度: ' + lat + ' \u00B0 ' +
+                    '\n 高度: ' + height + '米',
+                showBackground: true,
+                font: '15px sans-serif',
+                fillColor: Cesium.Color.WHITE,
+                horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+                verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY
+
+            });
+        }
+
+        //添加点
+        function createPoint(worldPosition) {
+            var point = viewer.entities.add({
+                position: worldPosition,
+                point: {
+                    color: Cesium.Color.RED,
+                    pixelSize: 6
+                }
+            });
+            return point;
+        }
+
+        //画连线,startPos,endPos 都是 Cartesian3 笛卡尔三维椭球坐标
+        function createLine(startPos, endPos) {
+            var pointArray = [];
+            pointArray[0] = startPos ;
+            pointArray[1] = endPos;
+
+            var line = viewer.entities.add({
+                name: "moveLine",
+                polyline: {
+                    //position: Cesium.Cartesian3.fromDegreesArray([startPos.x, startPos.y, endPos.x, endPos.y]),
+                    positions: pointArray,
+                    width: 3,
+                    material: Cesium.Color.RED,
+                    clampToGround: true                //贴地面画线
+                }
+            });
+            DestPos = endPos;
+            return line;
+        }
+
+        
+        var planeIsFly = false;     //是否启动飞机飞行持续动画，飞行到指定位置
+
+
+        //飞机沿线飞行的回调函数
+        function flyCallbackFunc(scene, time) {
+            //选择的笛卡尔分量Cartesian3.UNIT_X（x轴单位长度）乘以一个标量speed/10，得到速度向量speedVector
+            /*
+            var mySpeedVector = Cesium.Cartesian3.multiplyByScalar(
+                Cesium.Cartesian3.UNIT_X,
+                20,
+                mySpeedVector
+            );
+            */
+
+            var vMatrix4 = airplaneModel.modelMatrix;
+
+            var orientation = new Cesium.VelocityOrientationProperty(DestPostion);
+            vMatrix4 = Cesium.Transforms.headingPitchRollToFixedFrame(SrcPostion,orientation,Cesium.Ellipsoid.WGS84,Cesium.Transforms.eastNorthUpToFixedFrame,new Cesium.Matrix4());
+
+            airplaneModel.mo = vMatrix4;
+
+            //飞机的模型矩阵与速度向量speedVector相乘，得到position
+            /*
+            position = Cesium.Matrix4.multiplyByPoint(
+                airplaneModel.modelMatrix,
+                mySpeedVector,
+                position
+            );
+
+            // 更新模型姿态与位置
+            //飞机位置+旋转角度+地球+坐标矩阵=飞机模型矩阵
+            Cesium.Transforms.headingPitchRollToFixedFrame(
+                position,
+                headingPitchRoll,
+                Cesium.Ellipsoid.WGS84,
+                fixedFrameTransform,
+                airplaneModel.modelMatrix
+            );
+            */
+        }
+
+        //全局标签集合
+        var annotations = viewer.scene.primitives.add(new Cesium.LabelCollection());
+        var DestPostion;
+        var SrcPostion;
+  
+        //用鼠标右键点击飞行方向目标点
+        viewer.screenSpaceEventHandler.setInputAction(function (e) {
+
+             //获取 笛卡尔二维平面坐标,笛卡尔（直角）坐标 – 当用来表示位置的时候，这个坐标指在地固坐标系（Earth fixed-frame (ECEF)）下，相对地球中心的坐标位置，单位是米
+            var cartesian = viewer.camera.pickEllipsoid(e.position, viewer.scene.globe.ellipsoid);    // e.position 的坐标是屏幕分辨率坐标，转为地球的椭球展开后的投影的世界地图的二维坐标，就是笛卡尔二维平面坐标
+            if (cartesian) {
+                //将笛卡尔二维平面坐标,笛卡尔（直角）坐标转为椭球体的笛卡尔三维坐标（弧度），地图坐标
+                var cartographic = viewer.scene.globe.ellipsoid.cartesianToCartographic(cartesian);                 //将地球投影平面二维坐标，笛卡尔二维坐标（直角），转换为笛卡尔三维的球体弧度坐标
+
+                //将椭球体的笛卡尔三维坐标（弧度）转为 转为经纬度（弧度）和高度(WGS84地球高程)描述的三维坐标十进制数
+                var log_String = Cesium.Math.toDegrees(cartographic.longitude).toFixed(4);              //将笛卡尔三维立体球体坐标，弧度坐标 x,y数值取整，转换为经纬度
+                var lat_String = Cesium.Math.toDegrees(cartographic.latitude).toFixed(4);
+                var alti_String = (viewer.camera.positionCartographic.height).toFixed(2);               //弧度没有高度，以相机镜头高度
+
+                //console.log(log_String, '经度');
+                //console.log(lat_String, '纬度');
+                //console.log(alti_String, '视角高度');
+
+                annotate(cartesian, log_String, lat_String, alti_String);          //在点击中位置创建一个注释文本
+             
+                createLine(planePos, cartesian);                 //在飞机的右键点之间画一条连接线
+
+                DestPostion = cartesian;
+                SrcPostion = planePos;
+
+                //飞机沿着 line 飞行，动画
+                planeIsFly = true;
+
+                if (planeIsFly) {
+                    viewer.scene.preRender.addEventListener(flyCallbackFunc);
+                }
+            }
+        }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+
+
+
+        
+
+        </script>
+
+</body >
+</html >
+
